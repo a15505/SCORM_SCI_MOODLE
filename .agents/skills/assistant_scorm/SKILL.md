@@ -1,0 +1,176 @@
+---
+name: assistant_scorm
+description: Assistant de configuration technique et pédagogique pour la création de packages SCORM compatibles Moodle.
+---
+
+# Assistant de Configuration SCORM pour Moodle
+
+Ce skill est utilisé pour guider l'enseignant dans le choix et la spécification des paramètres techniques de son paquet SCORM (généré via des outils comme H5P, Storyline, Captivate ou du code HTML/JS personnalisé) afin qu'il s'intègre parfaitement dans Moodle.
+
+---
+
+## Modèle de Questionnement & Aide à la Décision
+
+Proposez à l'enseignant les choix suivants pour configurer son activité :
+
+### 1. Objectif Pédagogique et Suivi de l'Achèvement (Completion)
+Définissez quand Moodle considérera que l'activité est « Terminée ».
+* **Option A : Navigation / Diapositives vues** (Idéal pour les présentations théoriques ou démonstrations).
+  * *Comportement SCORM* : Moodle marque l'activité comme complétée lorsque l'élève a vu un certain pourcentage ou nombre de pages/diapositives.
+* **Option B : Réussite du test / Score minimal** (Idéal pour l'évaluation sommative ou formative).
+  * *Comportement SCORM* : L'achèvement est lié au succès d'un quiz intégré. L'activité passe au statut « Complétée » ou « Réussie » uniquement si le score atteint le seuil requis.
+* **Option C : Fin de scénario / Atteinte d'une diapositive clé** (Idéal pour le Jeu dont vous êtes le héros).
+  * *Comportement SCORM* : Dès que l'élève atteint la fin du scénario de victoire, un script JavaScript envoie la commande de complétion.
+
+---
+
+### 2. Évaluation et Transmission de la Note
+Comment le score de l'activité doit-il impacter le carnet de notes de Moodle ?
+* **Activité Formative (sans note)** :
+  * Le paquet transmet uniquement le statut d'achèvement (`cmi.core.lesson_status = "completed"`). Aucune note n'est enregistrée, ou celle-ci est purement indicative.
+* **Activité Sommative (évaluée)** :
+  * Le paquet transmet un score brut (`cmi.core.score.raw`) et un score maximal (`cmi.core.score.max`).
+  * Moodle enregistre cette note dans le carnet de notes. Il faut définir la note de passage dans Moodle (ex. : 60%).
+
+---
+
+### 3. Gestion des Tentatives et Reprise (Resume)
+* **Sauvegarde de l'état (Suspension)** :
+  * Si l'activité est longue, recommandez d'activer `cmi.core.exit = "suspend"` lors de la fermeture de l'activité par l'élève, et d'enregistrer l'état dans `cmi.suspend_data`. Cela permet à l'élève de reprendre exactement là où il s'est arrêté (`cmi.core.entry = "resume"`).
+* **Gestion des tentatives dans Moodle** :
+  * *Tentative unique* : Idéal pour une évaluation officielle.
+  * *Tentatives multiples* : Idéal pour l'apprentissage par l'erreur. Spécifier la méthode d'évaluation de Moodle (meilleure note, note moyenne, première tentative, dernière tentative).
+
+---
+
+## Répertoire des Variables SCORM Clés (Pour l'aide au codage)
+
+Si l'enseignant ou le développeur construit le SCORM manuellement (ex. avec du JS personnalisé), proposez ce tableau de référence rapide pour les variables SCORM 1.2 :
+
+| Variable SCORM 1.2 | Description / Valeurs types | Usage typique dans Moodle |
+| :--- | :--- | :--- |
+| `cmi.core.lesson_status` | `"passed"`, `"failed"`, `"completed"`, `"incomplete"` | Gère la complétion de l'activité Moodle et le suivi de progression. |
+| `cmi.core.score.raw` | Valeur numérique (ex: `85`) | Le score obtenu par l'élève, envoyé au carnet de notes de Moodle. |
+| `cmi.core.score.max` | Valeur numérique (ex: `100`) | Le score maximum possible. |
+| `cmi.core.score.min` | Valeur numérique (ex: `0`) | Le score minimum possible. |
+| `cmi.core.exit` | `"suspend"`, `"logout"`, `""` | Permet d'indiquer à Moodle si la session doit être sauvegardée ou réinitialisée. |
+| `cmi.suspend_data` | Chaîne de caractères (ex: JSON sérialisé) | Stocke les variables internes du jeu (niveaux passés, choix faits, PV restants). |
+
+---
+
+## Conseils de Compatibilité Moodle
+1. **SCORM 1.2 vs SCORM 2004** : Moodle supporte pleinement le standard **SCORM 1.2**. Bien qu'il supporte en partie SCORM 2004, il est fortement recommandé d'utiliser SCORM 1.2 pour éviter les bogues de communication et de sauvegarde des notes.
+2. **Sortie Propre** : Rappelez toujours que le paquet SCORM doit appeler `LMSCommit("")` après avoir mis à jour les notes, puis `LMSFinish("")` à la fermeture, sans quoi Moodle risque de ne pas enregistrer la note finale ou le statut de l'élève.
+3. **Pas de console de débogage interne** : Ne générez **jamais** de console de log ou d'éléments HTML de débogage dans l'activité SCORM finale. L'activité de l'élève doit rester propre, libre de toute interférence de style ou de redimensionnement liée à l'affichage des logs. Le débogage doit se faire via la console F12 ou à l'aide du simulateur externe de Moodle.
+
+---
+
+## Ressources autonomes à générer systématiquement
+
+Dans chaque projet d'activité SCORM, vous devez systématiquement copier ou générer les deux fichiers suivants disponibles dans les ressources du skill (`resources/`) sans aucune modification de leur logique interne qui dépendrait du projet :
+
+### 1. Le script SCORM et Redimensionnement (`scorm_api.js`)
+Ce fichier gère la détection de l'API Moodle, le pont vers le simulateur hors-ligne via `postMessage`, et la logique d'ajustement dynamique de l'iframe de Moodle pour éliminer les barres de défilement.
+*Il est autonome, ne dépend d'aucun autre fichier du projet, et s'initialise automatiquement.*
+
+### 2. Le simulateur de Moodle (`moodle_simulator.html`)
+Ce fichier permet aux concepteurs et enseignants de tester l'intégration SCORM 1.2 en local, de simuler la transmission des notes, de réinitialiser les tentatives et de valider le comportement du redimensionnement de l'iframe Moodle dans un environnement simulant Moodle 3.x / 4.x.
+*Il est autonome et s'exécute directement en ouvrant le fichier dans le navigateur.*
+
+---
+
+## Script d'Ajustement d'Iframe Moodle (Anti-Double Scrollbar)
+
+Pour éliminer de manière absolue les doubles barres de défilement, ce script universel et réactif est inclus de manière standard dans le fichier `scorm_api.js` autonome :
+
+```javascript
+// ── Resize iframe Moodle (hauteur dynamique bidirectionnelle) ───────────
+function resizeLMSIframe() {
+  // Mesurer la hauteur réelle du contenu (getBoundingClientRect évite les accumulations de scrollHeight)
+  var content = document.getElementById('activity-content') || document.body;
+  var height = Math.ceil(content.getBoundingClientRect().height) + 32; // marge de sécurité
+
+  try {
+    // 1. Modifier l'iframe directement
+    if (window.frameElement) {
+      window.frameElement.style.setProperty('height', height + 'px', 'important');
+      window.frameElement.style.setProperty('min-height', height + 'px', 'important');
+      window.frameElement.setAttribute('scrolling', 'no');
+      window.frameElement.style.setProperty('overflow', 'hidden', 'important');
+    }
+    
+    // 2. Ajuster les conteneurs du lecteur SCORM de Moodle parent (Boost & Classic)
+    if (window.parent && window.parent.document) {
+      var pd = window.parent.document;
+      ['scorm_content', 'scorm_layout', 'scorm_toc', 'scormpage'].forEach(function(id) {
+        var el = pd.getElementById(id);
+        if (el) { 
+          el.style.setProperty('height', 'auto', 'important'); 
+          el.style.setProperty('overflow', 'visible', 'important'); 
+        }
+      });
+      var so = pd.getElementById('scorm_object');
+      if (so) {
+        so.style.setProperty('height', height + 'px', 'important');
+        so.style.setProperty('min-height', height + 'px', 'important');
+        so.style.setProperty('overflow', 'hidden', 'important');
+      }
+    }
+    
+    // 3. Envoyer postMessage pour Moodle 4+ (compatibilité native)
+    window.parent.postMessage({ type: 'setHeight', height: height }, '*');
+    window.parent.postMessage({ type: 'resize', height: height }, '*');
+  } catch(e) {
+    console.warn("[SCORM] Erreur d'ajustement de hauteur :", e);
+  }
+}
+
+// Debounce pour éviter la surcharge de layout
+var _resizeTimer;
+function debouncedResize() {
+  clearTimeout(_resizeTimer);
+  _resizeTimer = setTimeout(resizeLMSIframe, 50);
+}
+
+// Observateur de redimensionnement de contenu (ResizeObserver)
+if (typeof ResizeObserver !== 'undefined') {
+  var _ro = new ResizeObserver(debouncedResize);
+  _ro.observe(document.getElementById('activity-content') || document.body);
+}
+
+// Observateur de modification du DOM (MutationObserver pour les apparitions dynamiques)
+if (typeof MutationObserver !== 'undefined') {
+  var _mo = new MutationObserver(debouncedResize);
+  _mo.observe(document.body, { childList: true, subtree: true });
+}
+
+// Écouter les messages venant d'autres composants si nécessaire
+window.addEventListener('message', function(e) {
+  var h = 0;
+  if (e.data && e.data.type === 'setHeight' && e.data.height) {
+    h = Math.ceil(e.data.height) + 32;
+  } else if (e.data && e.data.type === 'resize' && e.data.height) {
+    h = Math.ceil(e.data.height) + 32;
+  }
+  if (h > 0) {
+    try {
+      if (window.frameElement) {
+        window.frameElement.style.setProperty('height', h + 'px', 'important');
+        window.frameElement.style.setProperty('min-height', h + 'px', 'important');
+        window.frameElement.setAttribute('scrolling', 'no');
+      }
+      if (window.parent && window.parent !== window) {
+        window.parent.postMessage({ type: 'setHeight', height: h }, '*');
+      }
+    } catch(err) {}
+  }
+});
+
+// Appels initiaux
+window.addEventListener('load', resizeLMSIframe);
+document.addEventListener('DOMContentLoaded', resizeLMSIframe);
+
+// Exposer les alias de fonctions courants pour l'IA ou les scripts générés
+window.requestResize = debouncedResize;
+window.resizeIframe = debouncedResize;
+```

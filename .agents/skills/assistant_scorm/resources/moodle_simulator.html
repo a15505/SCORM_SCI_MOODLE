@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulateur Moodle - Test de Resizing SCORM</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600;700&family=Fira+Code:wght@400;500&display=swap');
+
+        :root {
+            --moodle-orange: #f25c05;
+            --moodle-dark: #3f4047;
+            --moodle-light: #f8f9fa;
+            --border-color: #dee2e6;
+            --bg-dark: #12141d;
+            --color-green: #28a745;
+            --color-red: #dc3545;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', -apple-system, sans-serif;
+            background-color: #eef1f5;
+            color: #333;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Top Moodle Header Bar */
+        header {
+            background-color: var(--moodle-dark);
+            color: white;
+            padding: 12px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 4px solid var(--moodle-orange);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .moodle-brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .moodle-logo {
+            background-color: var(--moodle-orange);
+            color: white;
+            font-weight: bold;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 1.1rem;
+        }
+
+        .course-title {
+            font-weight: 600;
+            font-size: 1rem;
+        }
+
+        /* Simulator Dashboard Layout */
+        .simulator-container {
+            display: grid;
+            grid-template-columns: 1fr 350px;
+            gap: 20px;
+            padding: 24px;
+            flex: 1;
+            max-width: 1600px;
+            width: 100%;
+            margin: 0 auto;
+        }
+
+        @media (max-width: 1024px) {
+            .simulator-container {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Left Side: Moodle Course View */
+        .moodle-content-area {
+            background: white;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 24px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .breadcrumbs {
+            font-size: 0.85rem;
+            color: #6c757d;
+            margin-bottom: 20px;
+        }
+
+        .breadcrumbs a {
+            color: var(--moodle-orange);
+            text-decoration: none;
+        }
+
+        .activity-header {
+            margin-bottom: 20px;
+            border-bottom: 2px solid #eef1f5;
+            padding-bottom: 12px;
+        }
+
+        .activity-title {
+            font-size: 1.5rem;
+            color: var(--moodle-dark);
+            font-weight: 700;
+        }
+
+        /* The embedded Moodle SCORM Iframe */
+        .iframe-container {
+            background: #f8f9fa;
+            border: 2px dashed #ccc;
+            border-radius: 8px;
+            position: relative;
+            padding: 10px;
+        }
+
+        .iframe-badge {
+            position: absolute;
+            top: -12px;
+            left: 20px;
+            background: #6c757d;
+            color: white;
+            font-size: 0.75rem;
+            padding: 2px 10px;
+            border-radius: 10px;
+            font-weight: 600;
+        }
+
+        iframe {
+            width: 100%;
+            height: 500px; /* Hauteur de départ */
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            background: white;
+            transition: height 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        }
+
+        /* Right Side: Simulator Control Panel & Logger */
+        .control-sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .sidebar-card {
+            background: white;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+
+        .card-title {
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--moodle-dark);
+            margin-bottom: 15px;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* Moodle Grade Stats */
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 12px;
+            font-size: 0.95rem;
+        }
+
+        .stat-label {
+            color: #6c757d;
+        }
+
+        .stat-value {
+            font-weight: bold;
+        }
+
+        .stat-value.passed { color: var(--color-green); }
+        .stat-value.failed { color: var(--color-red); }
+        .stat-value.incomplete { color: #ff9900; }
+
+        /* Simulator Actions */
+        .btn-reset {
+            background-color: var(--moodle-orange);
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            width: 100%;
+            font-weight: 600;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background 0.2s;
+            margin-top: 10px;
+        }
+
+        .btn-reset:hover {
+            background-color: #d14d02;
+        }
+
+        /* Moodle-side SCORM Trace Logger */
+        .logger-console {
+            background-color: var(--bg-dark);
+            color: #a0aab8;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.75rem;
+            height: 350px;
+            border-radius: 6px;
+            padding: 12px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            box-shadow: inset 0 2px 8px rgba(0,0,0,0.5);
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .log-item {
+            line-height: 1.4;
+            border-bottom: 1px solid rgba(255,255,255,0.02);
+            padding-bottom: 4px;
+        }
+
+        .log-item.in { color: #00e5ff; } /* API Call from SCO */
+        .log-item.out { color: #39ff14; } /* API Return from LMS */
+        .log-item.sys { color: #ff9900; } /* LMS System info */
+    </style>
+</head>
+<body>
+    <header>
+        <div class="moodle-brand">
+            <span class="moodle-logo">moodle</span>
+            <span class="course-title">Science et technologie - 4e secondaire (PFEQ)</span>
+        </div>
+        <div style="font-size: 0.9rem;">Mode Enseignant / Concepteur</div>
+    </header>
+
+    <div class="simulator-container">
+        <!-- Main Area (Simulating Moodle Activity Page) -->
+        <main class="moodle-content-area">
+            <div class="breadcrumbs">
+                Accès rapide : <a href="#">Mes cours</a> > <a href="#">Sci-Tech 4</a> > <span id="moodle-nav-universe">Sciences</span> > <span id="moodle-nav-activity">Activité SCORM</span>
+            </div>
+
+            <div class="activity-header">
+                <h2 class="activity-title" id="moodle-activity-title">Chargement de l'activité...</h2>
+                <p style="color: #6c757d; font-size: 0.9rem; margin-top: 4px;">
+                    Cette activité est intégrée dans un Iframe Moodle. Elle ajuste automatiquement sa hauteur pour éviter les doubles barres de défilement verticales.
+                </p>
+            </div>
+
+            <div class="iframe-container">
+                <span class="iframe-badge">Iframe Moodle (&lt;iframe id="contentframe"&gt;)</span>
+                <!-- Iframe du SCORM -->
+                <iframe id="contentframe" name="contentframe" src="index.html"></iframe>
+            </div>
+        </main>
+
+        <!-- Right Sidebar (Simulator Controls & Live Grade Tracker) -->
+        <aside class="control-sidebar">
+            <!-- Moodle Gradebook Status -->
+            <div class="sidebar-card">
+                <h3 class="card-title">Carnet de Notes Moodle</h3>
+                <div class="stat-row">
+                    <span class="stat-label">Statut SCORM :</span>
+                    <span class="stat-value incomplete" id="moodle-status">Non tenté</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">Note brute transmise :</span>
+                    <span class="stat-value" id="moodle-score">N/A</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">Hauteur de l'Iframe :</span>
+                    <span class="stat-value" id="moodle-height" style="color: var(--moodle-orange);">500px</span>
+                </div>
+                <button class="btn-reset" onclick="resetMoodleAttempt()">Effacer la tentative</button>
+            </div>
+
+            <!-- LMS API Communication Logs -->
+            <div class="sidebar-card" style="flex: 1; display: flex; flex-direction: column;">
+                <h3 class="card-title">Flux API SCORM 1.2 (Côté LMS)</h3>
+                <div class="logger-console" id="lms-logs">
+                    <div class="log-item sys">LMS Simulator initialisé. Attente du chargement de l'Iframe...</div>
+                </div>
+            </div>
+        </aside>
+    </div>
+
+    <!-- Script du Simulateur SCORM API Moodle -->
+    <script>
+        // État de la tentative Moodle
+        const moodleState = {
+            lesson_status: "not attempted",
+            score_raw: "",
+            suspend_data: ""
+        };
+
+        // Traceur de logs Moodle
+        function logLMS(message, direction = 'sys') {
+            const container = document.getElementById("lms-logs");
+            if (container) {
+                const item = document.createElement("div");
+                item.className = "log-item " + direction;
+                const time = new Date().toLocaleTimeString();
+                item.innerText = `[${time}] ${message}`;
+                container.appendChild(item);
+                container.scrollTop = container.scrollHeight;
+            }
+        }
+
+        // Détection du redimensionnement de l'Iframe dans Moodle
+        const iframe = document.getElementById("contentframe");
+        
+        // Observer les changements de hauteur de l'iframe directement
+        const resizeObserver = new ResizeObserver(entries => {
+            for (let entry of entries) {
+                const height = entry.contentRect.height;
+                document.getElementById("moodle-height").innerText = Math.round(height) + "px";
+            }
+        });
+        if (iframe) {
+            resizeObserver.observe(iframe);
+            
+            // Ajustement dynamique du titre de la page et du fil d'Ariane
+            iframe.addEventListener('load', () => {
+                try {
+                    const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+                    const pageTitle = iframeDoc.title;
+                    if (pageTitle) {
+                        document.title = "Simulateur Moodle - " + pageTitle;
+                        const titleEl = document.getElementById("moodle-activity-title");
+                        if (titleEl) titleEl.innerText = pageTitle;
+                        const navEl = document.getElementById("moodle-nav-activity");
+                        if (navEl) navEl.innerText = pageTitle;
+                    }
+                } catch (e) {
+                    console.log("[Simulateur] Impossible d'accéder au titre de l'iframe (CORS).");
+                }
+            });
+        }
+
+        // Écouter les messages cross-origin (postMessage) pour la communication de simulation et de resizing
+        window.addEventListener('message', function(event) {
+            if (!event.data) return;
+            
+            if (event.data.type === 'scorm_resize') {
+                const iframeElement = document.getElementById('contentframe');
+                if (iframeElement) {
+                    iframeElement.style.height = event.data.height + 'px';
+                    logLMS(`Système Moodle: Hauteur de l'iframe ajustée à ${event.data.height}px (via postMessage)`, 'sys');
+                }
+            } 
+            else if (event.data.type === 'scorm_initialize') {
+                logLMS("SCO appelle (via postMessage): LMSInitialize()", "in");
+                moodleState.lesson_status = localStorage.getItem("scorm_mock_cmi.core.lesson_status") || "incomplete";
+                moodleState.score_raw = localStorage.getItem("scorm_mock_cmi.core.score.raw") || "";
+                moodleState.suspend_data = localStorage.getItem("scorm_mock_cmi.suspend_data") || "";
+                
+                updateMoodleHUD();
+                logLMS("LMS répond: true (Initialisation réussie)", "out");
+            } 
+            else if (event.data.type === 'scorm_setvalue') {
+                const param = event.data.parameter;
+                const val = event.data.value;
+                logLMS(`SCO appelle (via postMessage): LMSSetValue("${param}", "${val}")`, "in");
+                
+                if (param === "cmi.core.lesson_status") {
+                    moodleState.lesson_status = val;
+                } else if (param === "cmi.core.score.raw") {
+                    moodleState.score_raw = val;
+                } else if (param === "cmi.suspend_data") {
+                    moodleState.suspend_data = val;
+                }
+                
+                updateMoodleHUD();
+                logLMS("LMS répond: true (Enregistré)", "out");
+            } 
+            else if (event.data.type === 'scorm_commit') {
+                logLMS("SCO appelle (via postMessage): LMSCommit()", "in");
+                logLMS("LMS répond: true (Sauvegardé)", "out");
+            } 
+            else if (event.data.type === 'scorm_finish') {
+                logLMS("SCO appelle (via postMessage): LMSFinish()", "in");
+                logLMS("LMS répond: true (Session fermée)", "out");
+            }
+        });
+
+        // Définition de l'API SCORM 1.2 dans window.API pour le SCO enfant
+        window.API = {
+            LMSInitialize: function(param) {
+                logLMS("SCO appelle: LMSInitialize()", "in");
+                // Charger l'état depuis localStorage pour persister la session Moodle
+                moodleState.lesson_status = localStorage.getItem("scorm_mock_cmi.core.lesson_status") || "incomplete";
+                moodleState.score_raw = localStorage.getItem("scorm_mock_cmi.core.score.raw") || "";
+                moodleState.suspend_data = localStorage.getItem("scorm_mock_cmi.suspend_data") || "";
+                
+                updateMoodleHUD();
+                logLMS("LMS répond: true (Initialisation réussie)", "out");
+                return "true";
+            },
+
+            LMSFinish: function(param) {
+                logLMS("SCO appelle: LMSFinish()", "in");
+                logLMS("LMS répond: true (Session fermée)", "out");
+                return "true";
+            },
+
+            LMSGetValue: function(parameter) {
+                logLMS(`SCO appelle: LMSGetValue("${parameter}")`, "in");
+                let val = "";
+                if (parameter === "cmi.core.lesson_status") val = moodleState.lesson_status;
+                else if (parameter === "cmi.core.score.raw") val = moodleState.score_raw;
+                else if (parameter === "cmi.suspend_data") val = moodleState.suspend_data;
+                else val = localStorage.getItem(`scorm_mock_${parameter}`) || "";
+
+                logLMS(`LMS répond: "${val}"`, "out");
+                return val;
+            },
+
+            LMSSetValue: function(parameter, value) {
+                logLMS(`SCO appelle: LMSSetValue("${parameter}", "${value}")`, "in");
+                localStorage.setItem(`scorm_mock_${parameter}`, value);
+                
+                if (parameter === "cmi.core.lesson_status") {
+                    moodleState.lesson_status = value;
+                } else if (parameter === "cmi.core.score.raw") {
+                    moodleState.score_raw = value;
+                } else if (parameter === "cmi.suspend_data") {
+                    moodleState.suspend_data = value;
+                }
+                
+                updateMoodleHUD();
+                logLMS("LMS répond: true (Enregistré)", "out");
+                return "true";
+            },
+
+            LMSCommit: function(param) {
+                logLMS("SCO appelle: LMSCommit()", "in");
+                logLMS("LMS répond: true (Données persistées sur le serveur)", "out");
+                return "true";
+            },
+
+            LMSGetLastError: function() { return "0"; },
+            LMSGetErrorString: function(code) { return "No error"; },
+            LMSGetDiagnostic: function(code) { return "Diagnostic OK"; }
+        };
+
+        // Mettre à jour le carnet de notes simulé
+        function updateMoodleHUD() {
+            const statusVal = document.getElementById("moodle-status");
+            const scoreVal = document.getElementById("moodle-score");
+            
+            if (statusVal) {
+                statusVal.innerText = moodleState.lesson_status.toUpperCase();
+                statusVal.className = "stat-value";
+                if (moodleState.lesson_status === "passed") statusVal.classList.add("passed");
+                else if (moodleState.lesson_status === "failed") statusVal.classList.add("failed");
+                else statusVal.classList.add("incomplete");
+            }
+            
+            if (scoreVal) {
+                scoreVal.innerText = moodleState.score_raw !== "" ? `${moodleState.score_raw} / 100` : "N/A";
+            }
+        }
+
+        // Effacer la tentative (simuler un prof qui réinitialise l'activité de l'élève)
+        function resetMoodleAttempt() {
+            logLMS("Système: Réinitialisation de la tentative demandée.", "sys");
+            
+            // Effacer localStorage
+            for (let i = localStorage.length - 1; i >= 0; i--) {
+                const key = localStorage.key(i);
+                if (key && key.startsWith("scorm_mock_")) {
+                    localStorage.removeItem(key);
+                }
+            }
+            
+            moodleState.lesson_status = "not attempted";
+            moodleState.score_raw = "";
+            moodleState.suspend_data = "";
+            updateMoodleHUD();
+            
+            // Rafraîchir l'Iframe pour redémarrer l'activité
+            const iframe = document.getElementById("contentframe");
+            if (iframe) {
+                iframe.style.height = "500px"; // Hauteur initiale
+                iframe.src = iframe.src;
+            }
+            logLMS("Système: Tentative effacée, Iframe rechargé.", "sys");
+        }
+    </script>
+</body>
+</html>
