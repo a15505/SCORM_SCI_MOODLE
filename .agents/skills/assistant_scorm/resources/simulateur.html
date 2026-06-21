@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulateur Moodle & Hub de Développement SCORM</title>
+    <!-- Librairies tierces -->
+    <script type="text/javascript" src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600;700&family=Fira+Code:wght@400;500&display=swap');
+
+        :root {
+            --moodle-orange: #f25c05;
+            --moodle-dark: #3f4047;
+            --moodle-light: #f8f9fa;
+            --border-color: #dee2e6;
+            --bg-dark: #12141d;
+            --color-green: #28a745;
+            --color-red: #dc3545;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Segoe UI', -apple-system, sans-serif;
+            background-color: #eef1f5;
+            color: #333;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Header & Tabs */
+        header {
+            background-color: var(--moodle-dark);
+            color: white;
+            padding: 0 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 4px solid var(--moodle-orange);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .moodle-brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 0;
+        }
+
+        .moodle-logo {
+            background-color: var(--moodle-orange);
+            color: white;
+            font-weight: bold;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 1.1rem;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 5px;
+            align-self: flex-end;
+        }
+
+        .tab-btn {
+            background: rgba(255,255,255,0.1);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            cursor: pointer;
+            font-weight: 600;
+            border-radius: 6px 6px 0 0;
+            transition: background 0.2s;
+        }
+        .tab-btn:hover { background: rgba(255,255,255,0.2); }
+        .tab-btn.active {
+            background: #eef1f5;
+            color: var(--moodle-dark);
+        }
+
+        .tab-content {
+            display: none;
+            flex: 1;
+            padding: 24px;
+            max-width: 1600px;
+            margin: 0 auto;
+            width: 100%;
+        }
+        .tab-content.active {
+            display: flex; /* or grid/block depending on tab */
+        }
+
+        /* --- TEST SCORM TAB --- */
+        #tab-test {
+            display: none;
+            grid-template-columns: 1fr 350px;
+            gap: 20px;
+        }
+        #tab-test.active { display: grid; }
+
+        .moodle-content-area {
+            background: white;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 24px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .iframe-container {
+            background: #f8f9fa;
+            border: 2px dashed #ccc;
+            border-radius: 8px;
+            position: relative;
+            padding: 10px;
+        }
+        .iframe-badge {
+            position: absolute;
+            top: -12px;
+            left: 20px;
+            background: #6c757d;
+            color: white;
+            font-size: 0.75rem;
+            padding: 2px 10px;
+            border-radius: 10px;
+            font-weight: 600;
+        }
+        iframe {
+            width: 100%;
+            height: 500px;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            background: white;
+            transition: height 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .control-sidebar { display: flex; flex-direction: column; gap: 20px; }
+        .sidebar-card {
+            background: white;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+        .card-title {
+            font-size: 1rem; font-weight: 700; color: var(--moodle-dark);
+            margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 8px; text-transform: uppercase;
+        }
+        .stat-row { display: flex; justify-content: space-between; margin-bottom: 12px; font-size: 0.95rem; }
+        .stat-label { color: #6c757d; }
+        .stat-value { font-weight: bold; }
+        .stat-value.passed { color: var(--color-green); }
+        .stat-value.failed { color: var(--color-red); }
+        .stat-value.incomplete { color: #ff9900; }
+
+        .btn-action {
+            background-color: var(--moodle-orange);
+            color: white; border: none; padding: 10px 15px; width: 100%;
+            font-weight: 600; border-radius: 4px; cursor: pointer; transition: background 0.2s;
+        }
+        .btn-action:hover { background-color: #d14d02; }
+
+        .logger-console {
+            background-color: var(--bg-dark); color: #a0aab8; font-family: 'Fira Code', monospace;
+            font-size: 0.75rem; height: 350px; border-radius: 6px; padding: 12px;
+            overflow-y: auto; display: flex; flex-direction: column; gap: 6px;
+        }
+        .log-item { line-height: 1.4; border-bottom: 1px solid rgba(255,255,255,0.02); padding-bottom: 4px; }
+        .log-item.in { color: #00e5ff; }
+        .log-item.out { color: #39ff14; }
+        .log-item.sys { color: #ff9900; }
+
+        /* --- ARBORESCENCE TAB --- */
+        #tab-tree {
+            display: none;
+            flex-direction: column;
+            gap: 20px;
+        }
+        #tab-tree.active { display: flex; }
+        #network-canvas {
+            flex: 1;
+            background: white;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            min-height: 600px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+
+        /* --- EXPORT TAB --- */
+        #tab-export {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+        }
+        #tab-export.active { display: flex; }
+        .export-card {
+            background: white;
+            padding: 40px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            text-align: center;
+            max-width: 600px;
+        }
+        .export-card h2 { color: var(--moodle-dark); margin-bottom: 20px; }
+        .export-card p { color: #6c757d; margin-bottom: 30px; line-height: 1.6; }
+        .export-btn {
+            background-color: var(--color-green);
+            font-size: 1.1rem;
+            padding: 15px 30px;
+        }
+        .export-btn:hover { background-color: #218838; }
+
+    </style>
+</head>
+<body>
+    <header>
+        <div class="moodle-brand">
+            <span class="moodle-logo">Hub SCORM</span>
+            <span style="font-weight: 600;">Interface de Développement</span>
+        </div>
+        <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab('test', this)">1. Tester le SCORM</button>
+            <button class="tab-btn" onclick="switchTab('tree', this)">2. Arborescence</button>
+            <button class="tab-btn" onclick="switchTab('export', this)">3. Générer SCORM (ZIP)</button>
+        </div>
+    </header>
+
+    <!-- TAB: TEST SCORM -->
+    <div id="tab-test" class="tab-content active">
+        <main class="moodle-content-area">
+            <h2 style="margin-bottom: 10px; color: var(--moodle-dark);">Aperçu Moodle</h2>
+            <p style="color: #6c757d; font-size: 0.9rem; margin-bottom: 20px;">L'activité tourne dans un iframe simulant le comportement exact de Moodle.</p>
+            <div class="iframe-container">
+                <span class="iframe-badge">&lt;iframe id="contentframe"&gt;</span>
+                <iframe id="contentframe" name="contentframe" src="about:blank"></iframe>
+            </div>
+        </main>
+        <aside class="control-sidebar">
+            <div class="sidebar-card">
+                <h3 class="card-title">Carnet de Notes Moodle</h3>
+                <div class="stat-row"><span class="stat-label">Statut SCORM :</span><span class="stat-value incomplete" id="moodle-status">Non tenté</span></div>
+                <div class="stat-row"><span class="stat-label">Note transmise :</span><span class="stat-value" id="moodle-score">N/A</span></div>
+                <div class="stat-row"><span class="stat-label">Hauteur Iframe :</span><span class="stat-value" id="moodle-height" style="color: var(--moodle-orange);">500px</span></div>
+                <button class="btn-action" onclick="resetMoodleAttempt()" style="margin-top: 10px;">Effacer la tentative & Recharger</button>
+            </div>
+            <div class="sidebar-card" style="flex: 1; display: flex; flex-direction: column;">
+                <h3 class="card-title">Flux API SCORM 1.2</h3>
+                <div class="logger-console" id="lms-logs">
+                    <div class="log-item sys">LMS Simulator initialisé.</div>
+                </div>
+            </div>
+        </aside>
+    </div>
+
+    <!-- TAB: ARBORESCENCE -->
+    <div id="tab-tree" class="tab-content">
+        <h2 style="color: var(--moodle-dark);">Arborescence du Scénario</h2>
+        <p style="color: #6c757d; font-size: 0.9rem;">Vue générée à partir du fichier <code>scenario_data.js</code>.</p>
+        <button class="btn-action" style="width: auto; align-self: flex-start;" onclick="loadGraph()">Recharger le graphe</button>
+        <div id="network-canvas"></div>
+    </div>
+
+    <!-- TAB: EXPORT -->
+    <div id="tab-export" class="tab-content">
+        <div class="export-card">
+            <h2>Générer le paquet SCORM</h2>
+            <p>
+                Cliquez ci-dessous pour assembler automatiquement votre projet.<br>
+                Le générateur va créer le fichier <code>index.html</code> (le runner pour l'élève), le manifeste <code>imsmanifest.xml</code>, et empaqueter les scripts nécessaires (Ink, scenario, api scorm) dans un fichier ZIP prêt à être déposé dans Moodle.
+            </p>
+            <div style="margin-bottom: 20px; text-align: left;">
+                <label for="export-title" style="font-weight: bold; display: block; margin-bottom: 5px;">Titre de l'activité (utilisé pour le nom du ZIP) :</label>
+                <input type="text" id="export-title" value="Mon Activité SCORM" style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px;">
+            </div>
+            <button class="btn-action export-btn" onclick="generateScormZip()">Télécharger le paquet SCORM (.zip)</button>
+        </div>
+    </div>
+
+    <script>
+        // --- GESTION DES ONGLETS ---
+        function switchTab(tabId, btn) {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            btn.classList.add('active');
+            document.getElementById('tab-' + tabId).classList.add('active');
+            if(tabId === 'tree') loadGraph();
+        }
+
+        // --- OUTILS SYSTEME ---
+        async function fetchLocalFile(filename) {
+            try {
+                // Tentative de fetch standard (fonctionne avec Live Server)
+                let r = await fetch(filename);
+                if (r.ok) return await r.text();
+            } catch(e) {
+                console.warn("Fetch failed for " + filename + ". Try fetching with cache buster or running a local server.");
+            }
+            return null;
+        }
+
+        // --- SIMULATEUR Moodle & SCORM ---
+        const moodleState = { lesson_status: "not attempted", score_raw: "", suspend_data: "" };
+
+        function logLMS(msg, dir = 'sys') {
+            const container = document.getElementById("lms-logs");
+            if (container) {
+                const item = document.createElement("div");
+                item.className = "log-item " + dir;
+                item.innerText = \`[\${new Date().toLocaleTimeString()}] \${msg}\`;
+                container.appendChild(item);
+                container.scrollTop = container.scrollHeight;
+            }
+        }
+
+        function updateMoodleHUD() {
+            const st = document.getElementById("moodle-status");
+            const sc = document.getElementById("moodle-score");
+            if(st) {
+                st.innerText = moodleState.lesson_status.toUpperCase();
+                st.className = "stat-value";
+                if (moodleState.lesson_status === "passed") st.classList.add("passed");
+                else if (moodleState.lesson_status === "failed") st.classList.add("failed");
+                else st.classList.add("incomplete");
+            }
+            if(sc) sc.innerText = moodleState.score_raw !== "" ? \`\${moodleState.score_raw} / 100\` : "N/A";
+        }
+
+        function resetMoodleAttempt() {
+            logLMS("Système: Réinitialisation de la tentative.", "sys");
+            for (let i = localStorage.length - 1; i >= 0; i--) {
+                const key = localStorage.key(i);
+                if (key && key.startsWith("scorm_mock_")) localStorage.removeItem(key);
+            }
+            moodleState.lesson_status = "not attempted"; moodleState.score_raw = ""; moodleState.suspend_data = "";
+            updateMoodleHUD();
+            loadIframeRunner();
+        }
+
+        window.API = {
+            LMSInitialize: function() {
+                logLMS("SCO appelle: LMSInitialize()", "in");
+                moodleState.lesson_status = localStorage.getItem("scorm_mock_cmi.core.lesson_status") || "incomplete";
+                moodleState.score_raw = localStorage.getItem("scorm_mock_cmi.core.score.raw") || "";
+                moodleState.suspend_data = localStorage.getItem("scorm_mock_cmi.suspend_data") || "";
+                updateMoodleHUD();
+                logLMS("LMS répond: true", "out"); return "true";
+            },
+            LMSFinish: function() { logLMS("SCO appelle: LMSFinish()", "in"); logLMS("LMS répond: true", "out"); return "true"; },
+            LMSGetValue: function(p) {
+                logLMS(\`SCO appelle: LMSGetValue("\${p}")\`, "in");
+                let val = "";
+                if (p === "cmi.core.lesson_status") val = moodleState.lesson_status;
+                else if (p === "cmi.core.score.raw") val = moodleState.score_raw;
+                else if (p === "cmi.suspend_data") val = moodleState.suspend_data;
+                else val = localStorage.getItem(\`scorm_mock_\${p}\`) || "";
+                logLMS(\`LMS répond: "\${val}"\`, "out"); return val;
+            },
+            LMSSetValue: function(p, v) {
+                logLMS(\`SCO appelle: LMSSetValue("\${p}", "\${v}")\`, "in");
+                localStorage.setItem(\`scorm_mock_\${p}\`, v);
+                if (p === "cmi.core.lesson_status") moodleState.lesson_status = v;
+                else if (p === "cmi.core.score.raw") moodleState.score_raw = v;
+                else if (p === "cmi.suspend_data") moodleState.suspend_data = v;
+                updateMoodleHUD();
+                logLMS("LMS répond: true", "out"); return "true";
+            },
+            LMSCommit: function() { logLMS("SCO appelle: LMSCommit()", "in"); logLMS("LMS répond: true", "out"); return "true"; },
+            LMSGetLastError: function() { return "0"; }, LMSGetErrorString: function() { return "No error"; }, LMSGetDiagnostic: function() { return "OK"; }
+        };
+
+        window.addEventListener('message', function(event) {
+            if (!event.data) return;
+            if (event.data.type === 'scorm_resize' || event.data.type === 'setHeight' || event.data.type === 'resize') {
+                const iframe = document.getElementById('contentframe');
+                if (iframe) {
+                    iframe.style.height = event.data.height + 'px';
+                    document.getElementById("moodle-height").innerText = Math.round(event.data.height) + "px";
+                }
+            } 
+        });
+
+        // Template de base du runner de test
+        const runnerTemplate = \`
+        <!DOCTYPE html>
+        <html lang="fr">
+        <head>
+            <meta charset="UTF-8">
+            <title>Runner de test</title>
+            <script src="scorm_api.js"><\\/script>
+        </head>
+        <body>
+            <div id="activity-content" style="padding: 20px;">
+                <h1>Activité en cours...</h1>
+                <p>Assurez-vous que le runner de votre projet construit l'interface ici.</p>
+                <!-- Code du jeu à injecter -->
+                <script src="ink.js"><\\/script>
+                <script src="story.js"><\\/script>
+                <script src="main.js"><\\/script>
+            </div>
+        </body>
+        </html>
+        \`;
+
+        async function loadIframeRunner() {
+            const iframe = document.getElementById("contentframe");
+            // Par défaut, essaie de charger le index.html (qui serait généré) ou runner de test
+            // Dans ce setup, on utilise directement une URL relative 'index.html' si disponible, sinon on utilise le template.
+            try {
+                let testRunnerHTML = await fetchLocalFile('index.html');
+                if(!testRunnerHTML) {
+                    logLMS("Impossible de charger index.html. Assurez-vous qu'un runner est construit.", "sys");
+                    testRunnerHTML = runnerTemplate;
+                }
+                const blob = new Blob([testRunnerHTML], { type: 'text/html' });
+                iframe.src = URL.createObjectURL(blob);
+                logLMS("Iframe rechargé avec succès.", "sys");
+            } catch(e) {
+                console.error(e);
+            }
+        }
+
+        window.addEventListener('DOMContentLoaded', loadIframeRunner);
+
+        // --- ARBORESCENCE ---
+        let network = null;
+        async function loadGraph() {
+            const container = document.getElementById('network-canvas');
+            
+            // Tenter de charger le script dynamiquement s'il n'est pas déjà dans le DOM
+            try {
+                const scriptContent = await fetchLocalFile('scenario_data.js');
+                if(scriptContent) {
+                    // Executer le script dans le contexte global pour obtenir window.scenarioData
+                    const scriptEl = document.createElement('script');
+                    scriptEl.text = scriptContent;
+                    document.head.appendChild(scriptEl);
+                }
+            } catch(e) { console.warn(e); }
+
+            setTimeout(() => {
+                if (typeof window.scenarioData !== 'undefined') {
+                    const data = {
+                        nodes: new vis.DataSet(window.scenarioData.nodes || []),
+                        edges: new vis.DataSet(window.scenarioData.edges || [])
+                    };
+                    const options = {
+                        layout: { hierarchical: { direction: "UD", sortMethod: "directed" } },
+                        physics: { enabled: false },
+                        nodes: { shape: 'box', margin: 10, font: { face: 'Segoe UI' } }
+                    };
+                    if (network) network.destroy();
+                    network = new vis.Network(container, data, options);
+                } else {
+                    container.innerHTML = "<div style='padding:20px; color:red;'>Erreur : <code>scenario_data.js</code> introuvable ou mal formaté. Vérifiez que la variable globale <code>window.scenarioData</code> y est définie.</div>";
+                }
+            }, 200);
+        }
+
+        // --- EXPORT ZIP ---
+        async function generateScormZip() {
+            const zip = new JSZip();
+            const titleRaw = document.getElementById("export-title").value || "activite_scorm";
+            const safeTitle = titleRaw.toLowerCase().normalize("NFD").replace(/[\\u0300-\\u036f]/g, "").replace(/[^a-z0-9]/g, "_");
+
+            // Manifeste
+            const manifest = \`<?xml version="1.0" standalone="no" ?>
+<manifest identifier="\${safeTitle}" version="1" xmlns="http://www.imsproject.org/xsd/imscp_rootv1p1p2" xmlns:adlcp="http://www.adlnet.org/xsd/adlcp_rootv1p2" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.imsproject.org/xsd/imscp_rootv1p1p2 imscp_rootv1p1p2.xsd http://www.imsglobal.org/xsd/imsmd_rootv1p2p1 imsmd_rootv1p2p1.xsd http://www.adlnet.org/xsd/adlcp_rootv1p2 adlcp_rootv1p2.xsd">
+  <metadata>
+    <schema>ADL SCORM</schema>
+    <schemaversion>1.2</schemaversion>
+  </metadata>
+  <organizations default="default_org">
+    <organization identifier="default_org">
+      <title>\${titleRaw}</title>
+      <item identifier="item_1" identifierref="resource_1">
+        <title>\${titleRaw}</title>
+      </item>
+    </organization>
+  </organizations>
+  <resources>
+    <resource identifier="resource_1" type="webcontent" adlcp:scormtype="sco" href="index.html">
+      <file href="index.html" />
+      <file href="scorm_api.js" />
+    </resource>
+  </resources>
+</manifest>\`;
+
+            zip.file("imsmanifest.xml", manifest);
+
+            // Fichiers vitaux à injecter dans le zip
+            const filesToFetch = ['scorm_api.js', 'scenario_data.js', 'ink.js', 'story.js', 'main.js', 'index.html', 'style.css'];
+            
+            for(let f of filesToFetch) {
+                let content = await fetchLocalFile(f);
+                if(content) {
+                    zip.file(f, content);
+                }
+            }
+
+            // Si index.html n'existe pas localement (ce qui est le but, on le génère)
+            if(!zip.file("index.html")) {
+                zip.file("index.html", runnerTemplate); // ou le contenu de base
+            }
+
+            // Génération et téléchargement
+            zip.generateAsync({type:"blob"}).then(function(content) {
+                saveAs(content, safeTitle + ".zip");
+            });
+        }
+    </script>
+</body>
+</html>

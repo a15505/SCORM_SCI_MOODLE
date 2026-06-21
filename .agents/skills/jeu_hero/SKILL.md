@@ -24,8 +24,12 @@ Définissez :
 * La **mission principale** (ex.: Identifier et stopper la source d'une contamination chimique dans une rivière locale).
 * Le **contexte de départ** (ex.: "Vous arrivez au laboratoire avec trois échantillons d'eau prélevés près d'une usine...").
 
-### Étape 2 : L'Arbre de Choix et Mécanismes de Convergence
+### Étape 2 : L'Arbre de Choix et Mécanismes de Convergence (Structure arborescente CYOA)
 Pour structurer le jeu sans surcharger le développement, proposez ce modèle de structure convergente :
+
+> [!IMPORTANT]
+> **Format de présentation de la structure** : Lors du plan d'implémentation, l'agent doit impérativement créer une **forme textuelle indentée** (listes à puces) pour faire comprendre la logique du jeu. Ne proposez **jamais** de schéma ou diagramme global (ex: Mermaid) car l'affichage n'est pas bien géré et illisible à l'écran. L'interface graphique conviviale de l'arborescence est réservée exclusivement à l'onglet Arborescence du `simulateur.html`.
+
 * **Niveau 1 : Diagnostic (Choix initial)**
   * Choix A (Correct/Méthodique) -> Rétroaction positive -> Accès au Niveau 2.
   * Choix B (Erreur commune/Intuition fausse) -> Explication scientifique de l'erreur -> Possibilité de se corriger ou pénalité -> Redirection vers le Niveau 2.
@@ -39,11 +43,29 @@ Chaque choix incorrect doit être une opportunité d'apprentissage. Ne dites pas
   * **Rétroaction** : "Attention ! Verser de l'eau dans un acide fort provoque une réaction hautement exothermique qui peut causer des projections d'acide. En laboratoire, on verse toujours l'acide dans l'eau ('Acide dans l'eau, bravo ! Eau dans l'acide, suicide !'). Vous devez recommencer la manipulation."
 
 ### Étape 4 : Gestion du Score et des Variables (Variables SCORM)
-Aidez l'enseignant à définir comment évaluer le jeu :
-* **Points de Vie / Énergie** : Commencer à 100% et soustraire des points à chaque mauvaise hypothèse scientifique.
-* **Score de Performance** : Gagner des points lors d'explications correctes ou de résolutions de problèmes complexes.
-* **Fin de partie (Game Over)** : Si le score descend sous un seuil, ou si une décision critique et fatale est prise.
-* **Victoire** : Résolution réussie du problème avec un score supérieur à la note de passage définie.
+Aidez l'enseignant à définir comment évaluer le jeu et veillez à configurer la valeur de départ de manière cohérente :
+* **Points de Vie / Énergie** : Commencer à 100 et soustraire des points à chaque mauvaise hypothèse scientifique.
+  * *Configuration* : Initialiser le score à `100` (`INITIAL_SCORE: 100` dans le runner et `VAR score = 100` dans Ink).
+* **Score de Performance / Cumulatif** : Gagner des points lors d'explications correctes ou de résolutions de problèmes complexes.
+  * *Configuration* : Initialiser le score à `0` (`INITIAL_SCORE: 0` dans le runner et `VAR score = 0` dans Ink) pour que l'accumulation des points soit visible et transmise correctement au carnet de notes Moodle.
+* **Fin de partie (Game Over)** : Si le score descend sous un seuil, ou si une décision critique et fatale est prise. Le paquet SCORM doit impérativement envoyer le statut `"failed"` à Moodle.
+* **Victoire** : Résolution réussie du problème avec un score supérieur à la note de passage définie. Le paquet SCORM doit impérativement envoyer le statut `"passed"` à Moodle.
+
+> [!IMPORTANT]
+> Pour un système cumulatif (gain de points), **le score de départ doit impérativement être configuré à `0`**. Commencer à `100` tout en appliquant des bonus positifs (`score: +20`) bloque la note au maximum dès le premier choix correct et rend le suivi Moodle incohérent.
+
+* **Validation mathématique du barème cumulatif** :
+  * L'agent doit obligatoirement sommer la valeur de tous les gains de score (`score: +N`) présents sur le chemin optimal (sans faute) menant à la victoire.
+  * L'agent doit s'assurer que le score cumulé de ce parcours parfait (score initial + somme des gains) atteint **exactement `100`**.
+  * Si la somme totale diffère de 100 (par exemple, 4 étapes à +20 points = 80 points au total), l'agent doit ajuster ou proposer d'ajuster les valeurs (par exemple, passer à +25 points par étape, ou ajouter un bonus à la victoire) pour garantir que le sans-faute permette à l'élève d'obtenir `100%` dans le carnet de notes de Moodle.
+
+* **Synchronisation obligatoire entre le Scénario (Ink) et l'Arborescence (scenario_data.js)** :
+  * Le visualiseur graphique (intégré dans `simulateur.html`) s'appuie exclusivement sur les structures de graphes de `scenario_data.js` pour dessiner les cartes et afficher les détails, tandis que le runner de jeu de test (lui aussi dans `simulateur.html`) s'appuie sur `story.ink`/`story-data.js`.
+  * **Actualisation automatique** : À chaque modification de structure, de texte, ou de pointage (tags de score) dans `story.ink`, l'agent doit **systématiquement et simultanément** mettre à jour le fichier `scenario_data.js` (les propriétés `scorm`, `text` ou la liste des `nodes` et `edges`) afin que l'onglet arborescence de `simulateur.html` reflète en temps réel les changements du scénario actif et du barème.
+
+* **Intégration et synchronisation de la Gamification (Vies / Droits à l'erreur)** :
+  * Si le scénario utilise des vies/énergie (`VAR vie = 3` dans Ink), le runner HTML doit intégrer un affichage dynamique dans le HUD (ex: `❤️❤️❤️` via une div `#lives-display` sans aucun cœur en dur statique en double dans le HTML pour éviter de fausser le décompte initial).
+  * **Lecture réactive des variables de jeu** : L'agent doit s'assurer que le script du runner HTML lit et synchronise la variable de vie Ink (`story.variablesState["vie"]`) à chaque étape (dans la boucle de rendu de l'histoire, ex: `gameState.lives = story.variablesState["vie"]`) pour mettre à jour l'affichage des vies en temps réel (cœurs rouges devenant noirs `🖤` en cas d'erreur) et ainsi refléter fidèlement l'état du jeu.
 
 ---
 

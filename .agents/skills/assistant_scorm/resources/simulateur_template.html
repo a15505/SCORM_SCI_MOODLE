@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Simulateur SCORM - [TITRE DE L'ACTIVITÉ]</title>
+  <!-- Anti-cache pour le développement -->
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
+  <!-- Bibliothèques pour le simulateur -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/standalone/umd/vis-network.min.js"></script>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    /* Reset pour Moodle */
+    html, body { background: transparent; padding: 0; margin: 0; }
+    #activity-content { margin: 0; border-radius: 0; box-shadow: none; }
+    
+    /* Modal Styles */
+    .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); }
+    .modal-content { background-color: #fefefe; margin: 10% auto; padding: 20px; border: 1px solid #888; width: 60%; border-radius: 8px; font-family: 'Inter', sans-serif; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+    .close-modal { color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer; }
+    .close-modal:hover { color: black; }
+    .modal-choices { margin-top: 15px; border-top: 1px solid #eee; padding-top: 10px; }
+    .modal-choice-item { background: #f8f9fa; padding: 8px; margin-bottom: 5px; border-radius: 4px; font-size: 0.9em; border-left: 3px solid #3498db; }
+  </style>
+</head>
+<body>
+  
+  <div class="sim-tabs">
+    <button class="tab-link active" onclick="openTab('tab-test')">🎮 Test SCORM</button>
+    <button class="tab-link" onclick="openTab('tab-tree')">🌳 Arborescence</button>
+    <button class="tab-link" onclick="openTab('tab-export')">📦 Générateur SCORM (ZIP)</button>
+  </div>
+
+  <div class="sim-wrapper">
+    <!-- ONGLET 1: TEST SCORM -->
+    <div id="tab-test" class="sim-tab-content active">
+      <h2>Simulateur Moodle (Runner)</h2>
+      
+      <div style="display: flex; gap: 30px; align-items: stretch;">
+        <!-- Conteneur de l'activité SCORM exacte (ce qui ira dans index.html) -->
+        <div id="activity-content" style="flex: 2; margin: 0;">
+          <div id="game-header">
+             <h1>[TITRE DE L'ACTIVITÉ]</h1>
+             <div id="hud">Vies : <span id="lives-display">❤️❤️❤️</span> | Score : <span id="score-display">0%</span></div>
+          </div>
+          <div id="game-body">
+             <div id="story-text">Chargement de l'histoire...</div>
+             <div id="choices-container"></div>
+          </div>
+        </div>
+        
+        <!-- Console SCORM sur le côté -->
+        <div style="flex: 1; border: 1px solid #ddd; background: #fafafa; border-radius: 8px; display: flex; flex-direction: column;">
+          <h3 style="margin: 0; padding: 15px; background: #eee; border-bottom: 1px solid #ddd; border-radius: 8px 8px 0 0;">Console SCORM (Simulée)</h3>
+          <div id="scorm-log" style="height: auto; flex-grow: 1; border-radius: 0 0 8px 8px; margin: 0; border: none; overflow-y: auto;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ONGLET 2: ARBORESCENCE -->
+    <div id="tab-tree" class="sim-tab-content">
+      <h2>Arborescence du Scénario</h2>
+      <p>Aperçu visuel des branches et des points SCORM associés générés depuis <code>scenario_data.js</code>.</p>
+      <div id="network-container"></div>
+      
+      <!-- Modal pour les détails du noeud -->
+      <div id="node-modal" class="modal">
+        <div class="modal-content">
+          <span class="close-modal" onclick="closeNodeModal()">&times;</span>
+          <h3 id="modal-title">Détails du noeud</h3>
+          <div id="modal-body"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ONGLET 3: EXPORT -->
+    <div id="tab-export" class="sim-tab-content">
+      <h2>Générer le paquet SCORM</h2>
+      <p>Pour des raisons de sécurité liées aux navigateurs (CORS), la création du fichier ZIP local ne peut pas se faire directement ici.</p>
+      <p>Veuillez copier la consigne ci-dessous et la coller à votre agent IA. Il se chargera de créer le fichier <code>index.html</code>, le manifeste Moodle, et de zipper le tout pour vous !</p>
+      
+      <div style="background: #222; color: #fff; padding: 15px; border-left: 4px solid var(--accent); margin-bottom: 20px; font-family: monospace; border-radius: 4px;" id="prompt-text">Agent, merci de générer le paquet SCORM (index.html, imsmanifest.xml) et l'archive ZIP [nom_de_l_activite].zip.</div>
+      
+      <button class="export-btn" onclick="copyPrompt()">
+        📋 Copier la consigne pour l'agent
+      </button>
+      <span id="copy-feedback" style="display:none; color: var(--success); margin-left: 10px; font-weight: bold;">Copié dans le presse-papier !</span>
+    </div>
+  </div>
+
+  <!-- Scripts du jeu -->
+  <script src="scorm_api.js"></script>
+  <script src="scenario_data.js"></script>
+  <script src="game_logic.js"></script>
+  
+  <!-- Logique spécifique au Simulateur (ne sera pas dans le ZIP final) -->
+  <script>
+    // Tab Logic
+    function openTab(tabId) {
+      document.querySelectorAll('.sim-tab-content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab-link').forEach(el => el.classList.remove('active'));
+      document.getElementById(tabId).classList.add('active');
+      event.currentTarget.classList.add('active');
+      if(tabId === 'tab-tree') { drawNetwork(); }
+    }
+
+    // SCORM Mock API for Simulator
+    var API = {
+      LMSInitialize: function() { logScorm('LMSInitialize (Simulé)'); return "true"; },
+      LMSFinish: function() { logScorm('LMSFinish (Simulé)'); return "true"; },
+      LMSGetValue: function(varname) { logScorm('LMSGetValue: ' + varname); return ""; },
+      LMSSetValue: function(varname, varvalue) { logScorm('LMSSetValue: ' + varname + ' = ' + varvalue); return "true"; },
+      LMSCommit: function() { logScorm('LMSCommit (Notes sauvegardées)'); return "true"; },
+      LMSGetLastError: function() { return "0"; },
+      LMSGetErrorString: function() { return ""; },
+      LMSGetDiagnostic: function() { return ""; }
+    };
+    function logScorm(msg) {
+      var log = document.getElementById('scorm-log');
+      if(log) {
+        log.innerHTML += "> " + msg + "<br>";
+        log.scrollTop = log.scrollHeight;
+      }
+    }
+
+    // Vis-network draw
+    var network = null;
+    function drawNetwork() {
+      if(network) return;
+      var container = document.getElementById('network-container');
+      var data = { 
+        nodes: new vis.DataSet(scenarioData.nodes), 
+        edges: new vis.DataSet(scenarioData.edges) 
+      };
+      var options = {
+        layout: { hierarchical: { direction: "UD", sortMethod: "directed", nodeSpacing: 150, levelSeparation: 100 } },
+        physics: false,
+        nodes: { shape: 'box', margin: 10, font: { face: 'Inter' } },
+        edges: { font: { align: 'middle' }, arrows: 'to' }
+      };
+      network = new vis.Network(container, data, options);
+      
+      // Ajout de l'événement clic pour le modal
+      network.on("click", function(params) {
+        if (params.nodes.length > 0) {
+          var nodeId = params.nodes[0];
+          var nodeData = scenarioData.nodes.find(n => n.id === nodeId);
+          if (nodeData && nodeData.storyKey && scenarioData.story[nodeData.storyKey]) {
+            var storyNode = scenarioData.story[nodeData.storyKey];
+            
+            document.getElementById('modal-title').innerText = nodeData.label.replace('\n', ' - ');
+            
+            var bodyHtml = "<div>" + storyNode.text + "</div>";
+            if (storyNode.choices && storyNode.choices.length > 0) {
+              bodyHtml += "<div class='modal-choices'><strong>Choix possibles :</strong><br>";
+              storyNode.choices.forEach(c => {
+                var scoreStr = c.score ? " (+"+c.score+" pts)" : "";
+                var livesStr = c.lives ? " ("+c.lives+" vie)" : "";
+                bodyHtml += "<div class='modal-choice-item'>➔ " + c.text + scoreStr + livesStr + "</div>";
+              });
+              bodyHtml += "</div>";
+            }
+            document.getElementById('modal-body').innerHTML = bodyHtml;
+            document.getElementById('node-modal').style.display = 'block';
+          }
+        }
+      });
+    }
+
+    function closeNodeModal() {
+      document.getElementById('node-modal').style.display = 'none';
+    }
+    
+    // Fermer le modal si on clique à l'extérieur
+    window.addEventListener('click', function(event) {
+      if (event.target == document.getElementById('node-modal')) {
+        closeNodeModal();
+      }
+    });
+
+    // Copier la consigne de génération
+    function copyPrompt() {
+      var text = document.getElementById('prompt-text').innerText;
+      navigator.clipboard.writeText(text).then(function() {
+        var feedback = document.getElementById('copy-feedback');
+        feedback.style.display = 'inline';
+        setTimeout(function() { feedback.style.display = 'none'; }, 3000);
+      });
+    }
+  </script>
+</body>
+</html>

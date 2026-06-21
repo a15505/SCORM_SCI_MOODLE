@@ -20,7 +20,7 @@ Définissez quand Moodle considérera que l'activité est « Terminée ».
 * **Option B : Réussite du test / Score minimal** (Idéal pour l'évaluation sommative ou formative).
   * *Comportement SCORM* : L'achèvement est lié au succès d'un quiz intégré. L'activité passe au statut « Complétée » ou « Réussie » uniquement si le score atteint le seuil requis.
 * **Option C : Fin de scénario / Atteinte d'une diapositive clé** (Idéal pour le Jeu dont vous êtes le héros).
-  * *Comportement SCORM* : Dès que l'élève atteint la fin du scénario de victoire, un script JavaScript envoie la commande de complétion.
+  * *Comportement SCORM* : Dès que l'élève atteint la fin du scénario, le script JavaScript envoie la commande de complétion. Il est impératif d'envoyer le statut `"passed"` (succès) en cas de victoire, et `"failed"` (échec) en cas de défaite finale ou de game over. Ne vous contentez pas de retourner une valeur générique `"completed"`.
 
 ---
 
@@ -67,19 +67,27 @@ Si l'enseignant ou le développeur construit le SCORM manuellement (ex. avec du 
 
 ## Ressources autonomes à générer systématiquement
 
-Dans chaque projet d'activité SCORM, vous devez systématiquement copier ou générer les deux fichiers suivants disponibles dans les ressources du skill (`resources/`) sans aucune modification de leur logique interne qui dépendrait du projet :
+Dans chaque projet d'activité SCORM, vous devez systématiquement générer ces deux ressources (sans modifier leur logique interne) :
 
 ### 1. Le script SCORM et Redimensionnement (`scorm_api.js`)
-Ce fichier gère la détection de l'API Moodle, le pont vers le simulateur hors-ligne via `postMessage`, et la logique d'ajustement dynamique de l'iframe de Moodle pour éliminer les barres de défilement.
-*Il est autonome, ne dépend d'aucun autre fichier du projet, et s'initialise automatiquement.*
+Ce fichier gère la détection de l'API Moodle, le pont vers le simulateur hors-ligne, et la logique d'ajustement dynamique de l'iframe.
 
-### 2. Le simulateur de Moodle (`moodle_simulator.html`)
-Ce fichier permet aux concepteurs et enseignants de tester l'intégration SCORM 1.2 en local, de simuler la transmission des notes, de réinitialiser les tentatives et de valider le comportement du redimensionnement de l'iframe Moodle dans un environnement simulant Moodle 3.x / 4.x.
-*Il est autonome et s'exécute directement en ouvrant le fichier dans le navigateur.*
+### 2. Le simulateur Moodle Tout-en-un (`simulateur.html`)
+Ce fichier unique remplace les multiples fichiers HTML de développement et s'exécute directement dans le navigateur. Il comprend 3 onglets intégrés :
+* **Onglet Test SCORM** : Simule la transmission des notes et le redimensionnement Moodle. **Règle d'interface** : La console de log SCORM doit toujours être placée sur le côté droit (layout Flexbox) et non en dessous de l'activité, pour permettre un suivi optimal.
+* **Onglet Arborescence** : Affiche graphiquement les `nodes` et `edges` de `scenario_data.js` (via vis-network) pour une interface conviviale. **Design épuré** : L'agent ne doit **jamais** placer de texte (label) sur les liens (edges) entre les noeuds pour ne pas surcharger visuellement l'arborescence. **L'arborescence doit être interactive** : lors du clic sur un nœud, un modal (fenêtre superposée) doit s'afficher contenant les données relatives à ce nœud (texte, choix, score, vies). Le modal se ferme via une croix ou un clic externe. *Note* : `scenario_data.js` doit inclure une `storyKey` sur chaque nœud.
+* **Onglet Générateur SCORM** : Étant donné que les navigateurs bloquent la lecture de fichiers locaux (CORS) avec le protocole `file://`, le simulateur **NE DOIT PAS** utiliser JSZip. À la place, cet onglet doit simplement afficher un message clair et un bouton permettant à l'utilisateur de copier une consigne à coller à l'agent. La consigne doit dire : "Agent, merci de générer le paquet SCORM (index.html, imsmanifest.xml) et l'archive ZIP."
+
+> [!IMPORTANT]
+> **Règle de préservation de l'interface** : Vous ne devez **jamais recréer le simulateur de zéro**. Pour tout nouveau projet, copiez le gabarit standard situé dans `.agents/skills/assistant_scorm/resources/simulateur_template.html`. Vous devez uniquement remplacer le texte de la balise `<title>` et de la balise `<h1>` avec le titre de la nouvelle activité. Toute la logique du jeu et le contenu doivent être ajoutés dans les fichiers externes (`scenario_data.js`, `game_logic.js`, `styles.css`) qui sont appelés par ce gabarit.
 
 ---
 
 ## Script d'Ajustement d'Iframe Moodle (Anti-Double Scrollbar)
+
+> [!WARNING]
+> **Règle d'or sur le CSS (Anti-boucle infinie)**
+> Ne définissez jamais de `min-height: 100vh` ou `height: 100vh` sur le `body` ou un conteneur principal de l'activité SCORM. Puisque le script ajuste l'iframe à la hauteur du contenu, l'unité `vh` (viewport height) fera grandir le contenu à chaque fois que l'iframe grandira, créant une boucle infinie de redimensionnement qui fera gonfler l'iframe indéfiniment dans Moodle et fera crasher le navigateur. Utilisez toujours `min-height: 100%`.
 
 Pour éliminer de manière absolue les doubles barres de défilement, ce script universel et réactif est inclus de manière standard dans le fichier `scorm_api.js` autonome :
 
@@ -174,3 +182,14 @@ document.addEventListener('DOMContentLoaded', resizeLMSIframe);
 window.requestResize = debouncedResize;
 window.resizeIframe = debouncedResize;
 ```
+
+---
+
+## Publication et Export ZIP (Géré par l'Agent)
+
+Lorsque l'utilisateur colle la consigne générant le paquet ZIP final pour Moodle, l'agent doit prendre le relais et effectuer le travail en utilisant ses outils (et non le navigateur) :
+1. **Création du Runner et du Manifeste** : L'agent doit générer les fichiers `index.html` (le runner SCORM propre) et `imsmanifest.xml` via `write_to_file`.
+2. **Nommage dynamique basé sur le titre** : L'archive ZIP finale doit obligatoirement être nommée en reprenant le titre de l'activité.
+   * **Règle de formatage** : Les espaces doivent être remplacés par des traits de soulignement (`_`) ou des tirets (`-`). L'agent doit conserver et **autoriser les accents ainsi que les apostrophes (`'`)** dans le nom du fichier.
+   * *Exemple* : `l_énigme_de_la_poudre_blanche.zip`.
+3. **Création de l'Archive** : L'agent doit utiliser `run_command` (ex: `Compress-Archive` sous Windows PowerShell) pour zipper **uniquement** les fichiers requis (`index.html`, `imsmanifest.xml`, `scenario_data.js`, `scorm_api.js`, `game_logic.js`, `styles.css`) en excluant `simulateur.html` et les fichiers sources (ex: `.md`, `.ink`, `.agents`).

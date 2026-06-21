@@ -324,3 +324,74 @@ const ScormAPI = {
         }
     }
 };
+
+// ── Fonctions globales standards SCORM 1.2 (Wrapper) ──
+window.LMSInitialize = function(param) {
+    return ScormAPI.init() ? "true" : "false";
+};
+
+window.LMSGetValue = function(parameter) {
+    return ScormAPI.getValue(parameter);
+};
+
+window.LMSSetValue = function(parameter, value) {
+    return ScormAPI.setValue(parameter, value) ? "true" : "false";
+};
+
+window.LMSCommit = function(param) {
+    return ScormAPI.commit() ? "true" : "false";
+};
+
+window.LMSFinish = function(param) {
+    return ScormAPI.finish() ? "true" : "false";
+};
+
+window.LMSGetLastError = function() {
+    return "0";
+};
+
+window.LMSGetErrorString = function(errorCode) {
+    return "No error";
+};
+
+window.LMSGetDiagnostic = function(errorCode) {
+    return "Diagnostic OK";
+};
+
+// ── Redimensionnement automatique réactif (Anti-Double Scrollbar) ──
+
+let _resizeTimer;
+function debouncedResize() {
+    clearTimeout(_resizeTimer);
+    _resizeTimer = setTimeout(() => {
+        if (typeof ScormAPI.adjustParentIframeHeight === 'function') {
+            ScormAPI.adjustParentIframeHeight(32);
+        }
+    }, 50);
+}
+
+// Exposer les alias de fonctions courants pour l'IA ou les runners
+window.requestResize = debouncedResize;
+window.resizeIframe = debouncedResize;
+
+// Attacher les observateurs
+window.addEventListener('DOMContentLoaded', () => {
+    // Redimensionnement initial
+    debouncedResize();
+    
+    // Observateur de redimensionnement de contenu (ResizeObserver)
+    if (typeof ResizeObserver !== 'undefined') {
+        const target = document.getElementById('activity-content') || document.body;
+        const ro = new ResizeObserver(debouncedResize);
+        ro.observe(target);
+    }
+    
+    // Observateur de modification du DOM (MutationObserver)
+    if (typeof MutationObserver !== 'undefined') {
+        const mo = new MutationObserver(debouncedResize);
+        mo.observe(document.body, { childList: true, subtree: true });
+    }
+});
+
+// Déclencheur sur le load (images, polices)
+window.addEventListener('load', debouncedResize);
