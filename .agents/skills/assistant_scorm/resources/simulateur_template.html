@@ -22,6 +22,12 @@
     .close-modal:hover { color: black; }
     .modal-choices { margin-top: 15px; border-top: 1px solid #eee; padding-top: 10px; }
     .modal-choice-item { background: #f8f9fa; padding: 8px; margin-bottom: 5px; border-radius: 4px; font-size: 0.9em; border-left: 3px solid #3498db; }
+    
+    /* Custom Thin Scrollbar for SCORM Console */
+    #scorm-log { scrollbar-width: thin; scrollbar-color: #555 transparent; }
+    #scorm-log::-webkit-scrollbar { width: 6px; }
+    #scorm-log::-webkit-scrollbar-track { background: transparent; }
+    #scorm-log::-webkit-scrollbar-thumb { background-color: #555; border-radius: 10px; }
   </style>
 </head>
 <body>
@@ -37,9 +43,9 @@
     <div id="tab-test" class="sim-tab-content active">
       <h2>Simulateur Moodle (Runner)</h2>
       
-      <div style="display: flex; gap: 30px; align-items: stretch;">
+      <div style="display: flex; gap: 30px; align-items: flex-start;">
         <!-- Conteneur de l'activité SCORM exacte (ce qui ira dans index.html) -->
-        <div id="activity-content" style="flex: 2; margin: 0;">
+        <div id="activity-content" style="flex: 2; margin: 0; width: 100%;">
           <div id="game-header">
              <h1>[TITRE DE L'ACTIVITÉ]</h1>
              <div id="hud">Vies : <span id="lives-display">❤️❤️❤️</span> | Score : <span id="score-display">0%</span></div>
@@ -51,9 +57,9 @@
         </div>
         
         <!-- Console SCORM sur le côté -->
-        <div style="flex: 1; border: 1px solid #ddd; background: #fafafa; border-radius: 8px; display: flex; flex-direction: column;">
-          <h3 style="margin: 0; padding: 15px; background: #eee; border-bottom: 1px solid #ddd; border-radius: 8px 8px 0 0;">Console SCORM (Simulée)</h3>
-          <div id="scorm-log" style="height: auto; flex-grow: 1; border-radius: 0 0 8px 8px; margin: 0; border: none; overflow-y: auto;"></div>
+        <div style="flex: 1; border: 1px solid #ddd; background: #222; color: #fff; border-radius: 8px; display: flex; flex-direction: column; overflow: hidden; height: 600px; position: sticky; top: 20px;">
+          <h3 style="margin: 0; padding: 15px; background: #111; border-bottom: 1px solid #333; border-radius: 8px 8px 0 0; color: #3b82f6;">Console SCORM (Simulée)</h3>
+          <div id="scorm-log" style="flex: 1; min-height: 0; border-radius: 0 0 8px 8px; margin: 0; border: none; overflow-y: auto; padding: 10px; font-family: monospace; font-size: 0.9em; color: #ccc;"></div>
         </div>
       </div>
     </div>
@@ -109,8 +115,13 @@
     var API = {
       LMSInitialize: function() { logScorm('LMSInitialize (Simulé)'); return "true"; },
       LMSFinish: function() { logScorm('LMSFinish (Simulé)'); return "true"; },
-      LMSGetValue: function(varname) { logScorm('LMSGetValue: ' + varname); return ""; },
-      LMSSetValue: function(varname, varvalue) { logScorm('LMSSetValue: ' + varname + ' = ' + varvalue); return "true"; },
+      LMSGetValue: function(varname) { return ""; },
+      LMSSetValue: function(varname, varvalue) { 
+        if (varname === 'cmi.core.score.raw' || varname === 'cmi.core.lesson_status' || varname === 'cmi.core.exit') {
+          logScorm('LMSSetValue: ' + varname + ' = ' + varvalue); 
+        }
+        return "true"; 
+      },
       LMSCommit: function() { logScorm('LMSCommit (Notes sauvegardées)'); return "true"; },
       LMSGetLastError: function() { return "0"; },
       LMSGetErrorString: function() { return ""; },

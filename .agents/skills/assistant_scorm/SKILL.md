@@ -35,8 +35,8 @@ Comment le score de l'activité doit-il impacter le carnet de notes de Moodle ?
 ---
 
 ### 3. Gestion des Tentatives et Reprise (Resume)
-* **Sauvegarde de l'état (Suspension)** :
-  * Si l'activité est longue, recommandez d'activer `cmi.core.exit = "suspend"` lors de la fermeture de l'activité par l'élève, et d'enregistrer l'état dans `cmi.suspend_data`. Cela permet à l'élève de reprendre exactement là où il s'est arrêté (`cmi.core.entry = "resume"`).
+* **Sauvegarde de l'état (Suspension) - Obligatoire** :
+  * L'agent doit **systématiquement** activer `cmi.core.exit = "suspend"` lors de la fermeture de l'activité, et enregistrer l'état dans `cmi.suspend_data`. Cela garantit par défaut que l'élève puisse reprendre exactement là où il s'est arrêté (`cmi.core.entry = "resume"`). Il s'agit d'une exigence incontournable pour toute activité.
 * **Gestion des tentatives dans Moodle** :
   * *Tentative unique* : Idéal pour une évaluation officielle.
   * *Tentatives multiples* : Idéal pour l'apprentissage par l'erreur. Spécifier la méthode d'évaluation de Moodle (meilleure note, note moyenne, première tentative, dernière tentative).

@@ -41,6 +41,7 @@ Pour structurer le jeu sans surcharger le développement, proposez ce modèle de
 Chaque choix incorrect doit être une opportunité d'apprentissage. Ne dites pas simplement "Faux", expliquez le phénomène physique, chimique ou biologique :
 * *Exemple (Univers matériel)* : Si l'élève choisit de mélanger un acide fort avec de l'eau en versant l'eau dans l'acide :
   * **Rétroaction** : "Attention ! Verser de l'eau dans un acide fort provoque une réaction hautement exothermique qui peut causer des projections d'acide. En laboratoire, on verse toujours l'acide dans l'eau ('Acide dans l'eau, bravo ! Eau dans l'acide, suicide !'). Vous devez recommencer la manipulation."
+* **Rétroaction sur la perte de vie** : Lorsqu'un choix ou une erreur fait perdre une vie à l'élève ou lui retire des points, l'agent doit obligatoirement retourner une rétroaction spécifique indiquant clairement la cause (ex: "Vous avez perdu une vie car vous avez inséré le tison au lieu de la flamme"). L'élève doit comprendre immédiatement quelle action a entraîné cette pénalité.
 
 ### Étape 4 : Gestion du Score et des Variables (Variables SCORM)
 Aidez l'enseignant à définir comment évaluer le jeu et veillez à configurer la valeur de départ de manière cohérente :
