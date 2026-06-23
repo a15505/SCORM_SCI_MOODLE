@@ -22,15 +22,15 @@ Pour garantir une autonomie totale du futur paquet SCORM (zéro dépendance web 
 ## Processus de Création
 
 1. **Génération de la Maquette** :
-   - Créez ou mettez à jour `simulateur.html` (en utilisant le gabarit hub s'il existe).
+   - Vous devez **obligatoirement** utiliser le gabarit `.agents/skills/assistant_scorm/resources/simulateur_template.html` pour créer ou mettre à jour `simulateur.html`. N'écrasez jamais ce fichier avec une page HTML vierge. L'interface Bootstrap du jeu doit être injectée **exclusivement à l'intérieur** de la balise `<div id="activity-content">`.
    - Générez `styles.css` (incluant les `@font-face` et vos styles Bootstrap personnalisés).
-   - Générez `game_logic.js` (pour gérer les clics et l'affichage du contenu).
-   - Si applicable, générez `scenario_data.js` pour la structure.
+   - Générez `scenario_data.js` pour la structure. **Attention** : Pour assurer la compatibilité avec le visualiseur `vis-network` du gabarit, `scenario_data.js` doit obligatoirement exporter : un tableau `nodes` (ex: `[{id:"n1", label:"Titre", storyKey:"n1"}]`), un tableau `edges` (ex: `[{from:"n1", to:"n2"}]`), et un objet `story` contenant les textes et choix réels du jeu indexés par `storyKey`.
+   - Générez `game_logic.js` (pour gérer les clics et l'affichage du contenu depuis l'objet `scenarioData.story`).
    - Assurez-vous d'utiliser l'outil `run_command` pour télécharger (via `curl` ou script PowerShell) les dépendances Bootstrap, FontAwesome et les polices si elles ne sont pas déjà présentes dans le projet.
 
 2. **Vérification Ergonomique** : 
-   - Lancez automatiquement ou proposez à l'utilisateur de lancer un serveur web local (ex: `npx http-server -p 8000 -c-1`).
-   - Fournissez l'URL (ex: `http://localhost:8000/simulateur.html`) pour que l'utilisateur valide l'interface.
+   - Lancez **automatiquement** le serveur web local via l'outil `run_command` (ex: `npx http-server -p 8000 -c-1`). N'attendez pas que l'utilisateur le fasse.
+   - Fournissez un **hyperlien cliquable** (ex: `[http://localhost:8000/simulateur.html](http://localhost:8000/simulateur.html)`) dans votre réponse pour que l'utilisateur puisse valider l'interface directement.
 
 3. **Validation Exigée** :
    - Ne générez **aucun** paquet SCORM ZIP à cette étape.
