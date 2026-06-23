@@ -3,9 +3,9 @@ name: assistant_scorm
 description: Assistant de configuration technique et pédagogique pour la création de packages SCORM compatibles Moodle.
 ---
 
-# Assistant de Configuration SCORM pour Moodle
+# Assistant de Configuration SCORM pour Moodle (Étape 3 du Pipeline)
 
-Ce skill est utilisé pour guider l'enseignant dans le choix et la spécification des paramètres techniques de son paquet SCORM (généré via des outils comme H5P, Storyline, Captivate ou du code HTML/JS personnalisé) afin qu'il s'intègre parfaitement dans Moodle.
+Ce skill est utilisé **à l'Étape 3** (après le prototypage web) pour configurer les paramètres techniques du paquet SCORM et l'empaqueter. Son rôle est d'assurer la compatibilité avec Moodle tout en préservant **strictement** le script de redimensionnement de l'Iframe, et de générer l'archive ZIP autonome sans dépendances externes (incluant localement Bootstrap, FontAwesome et les polices).
 
 ---
 
@@ -76,7 +76,6 @@ Ce fichier gère la détection de l'API Moodle, le pont vers le simulateur hors-
 Ce fichier unique remplace les multiples fichiers HTML de développement et s'exécute directement dans le navigateur. Il comprend 3 onglets intégrés :
 * **Onglet Test SCORM** : Simule la transmission des notes et le redimensionnement Moodle. **Règle d'interface** : La console de log SCORM doit toujours être placée sur le côté droit (layout Flexbox) et non en dessous de l'activité, pour permettre un suivi optimal.
 * **Onglet Arborescence** : Affiche graphiquement les `nodes` et `edges` de `scenario_data.js` (via vis-network) pour une interface conviviale. **Design épuré** : L'agent ne doit **jamais** placer de texte (label) sur les liens (edges) entre les noeuds pour ne pas surcharger visuellement l'arborescence. **L'arborescence doit être interactive** : lors du clic sur un nœud, un modal (fenêtre superposée) doit s'afficher contenant les données relatives à ce nœud (texte, choix, score, vies). Le modal se ferme via une croix ou un clic externe. *Note* : `scenario_data.js` doit inclure une `storyKey` sur chaque nœud.
-* **Onglet Générateur SCORM** : Étant donné que les navigateurs bloquent la lecture de fichiers locaux (CORS) avec le protocole `file://`, le simulateur **NE DOIT PAS** utiliser JSZip. À la place, cet onglet doit simplement afficher un message clair et un bouton permettant à l'utilisateur de copier une consigne à coller à l'agent. La consigne doit dire : "Agent, merci de générer le paquet SCORM (index.html, imsmanifest.xml) et l'archive ZIP."
 
 > [!IMPORTANT]
 > **Règle de préservation de l'interface** : Vous ne devez **jamais recréer le simulateur de zéro**. Pour tout nouveau projet, copiez le gabarit standard situé dans `.agents/skills/assistant_scorm/resources/simulateur_template.html`. Vous devez uniquement remplacer le texte de la balise `<title>` et de la balise `<h1>` avec le titre de la nouvelle activité. Toute la logique du jeu et le contenu doivent être ajoutés dans les fichiers externes (`scenario_data.js`, `game_logic.js`, `styles.css`) qui sont appelés par ce gabarit.
@@ -192,4 +191,8 @@ Lorsque l'utilisateur colle la consigne générant le paquet ZIP final pour Mood
 2. **Nommage dynamique basé sur le titre** : L'archive ZIP finale doit obligatoirement être nommée en reprenant le titre de l'activité.
    * **Règle de formatage** : Les espaces doivent être remplacés par des traits de soulignement (`_`) ou des tirets (`-`). L'agent doit conserver et **autoriser les accents ainsi que les apostrophes (`'`)** dans le nom du fichier.
    * *Exemple* : `l_énigme_de_la_poudre_blanche.zip`.
-3. **Création de l'Archive** : L'agent doit utiliser `run_command` (ex: `Compress-Archive` sous Windows PowerShell) pour zipper **uniquement** les fichiers requis (`index.html`, `imsmanifest.xml`, `scenario_data.js`, `scorm_api.js`, `game_logic.js`, `styles.css`) en excluant `simulateur.html` et les fichiers sources (ex: `.md`, `.ink`, `.agents`).
+3. **Création de l'Archive (Autonomie totale)** : L'agent doit utiliser `run_command` (ex: `Compress-Archive` sous Windows PowerShell) pour zipper **tous** les fichiers requis pour la version finale :
+   * Les fichiers de code : `index.html`, `imsmanifest.xml`, `scenario_data.js`, `scorm_api.js`, `game_logic.js`, `styles.css`.
+   * Le dossier `assets/` entier (contenant Bootstrap 5 local, FontAwesome 6 local, et les polices locales Ubuntu/Viga) afin de garantir une exécution 100% autonome sans connexion internet externe.
+   * *Exclusion* : Exclure `simulateur.html` et les fichiers sources de développement (ex: `.md`, `.ink`, `.agents`).
+4. **Validation du SCORM via le Simulateur** : Après la création du ZIP, l'agent doit impérativement mettre à jour le fichier `simulateur.html` pour y intégrer la fausse API SCORM (`var API = { ... }`) et inclure le script `scorm_api.js`. Il doit ensuite demander à l'utilisateur de retourner sur le simulateur local (`http://localhost:8000/simulateur.html`) pour jouer jusqu'à la fin de l'activité et vérifier visuellement dans le panneau latéral (Console SCORM) que le score et le statut (passed/failed) sont bien transmis. Enfin, juste en dessous de cette instruction de validation, l'agent **doit fournir un lien cliquable direct** vers le fichier `.zip` final pour faciliter le téléchargement par l'utilisateur.

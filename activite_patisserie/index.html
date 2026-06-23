@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Le Défi de la Pâtisserie (SCORM)</title>
+  
+  <!-- Bibliothèques Locales -->
+  <link rel="stylesheet" href="assets/css/bootstrap.min.css">
+  <link rel="stylesheet" href="assets/css/all.min.css">
+  <link rel="stylesheet" href="styles.css">
+  
+  <style>
+    /* Reset pour Moodle */
+    html, body { background: transparent; padding: 0; margin: 0; }
+    #activity-content { margin: 0; border-radius: 0; box-shadow: none; width: 100%; max-width: 800px; margin: 0 auto; }
+  </style>
+</head>
+<body>
+  
+  <div id="activity-content" class="game-container text-center">
+    <i class="fa-solid fa-cake-candles header-icon"></i>
+    <h2>La Pâtisserie Mathématique</h2>
+    
+    <div class="progress mb-4" style="height: 10px;">
+      <div id="main-progress" class="progress-bar progress-bar-custom" role="progressbar" style="width: 0%;"></div>
+    </div>
+
+    <!-- Étape 1 -->
+    <div id="step-1" class="step-card active">
+      <h4>Étape 1 : La Farine</h4>
+      <p class="lead mt-3">Pour préparer la pâte, la recette demande <span id="frac1-base"></span> de tasse de farine.<br>
+      Malheureusement, tu n'as qu'une tasse à mesurer graduée en <span id="frac1-den-text"></span>.</p>
+      <div class="card p-3 my-4 bg-light border-0">
+        <h5>Combien dois-tu mettre pour avoir l'équivalent de <span id="frac1-target"></span> ?</h5>
+        <div id="step1-choices" class="mt-3"></div>
+      </div>
+      <div id="feedback-1" class="feedback-box"></div>
+      <button id="next-btn-1" class="btn btn-primary mt-3" style="display:none;" onclick="nextStep(1)">Continuer <i class="fa-solid fa-arrow-right"></i></button>
+    </div>
+
+    <!-- Étape 2 -->
+    <div id="step-2" class="step-card">
+      <h4>Étape 2 : Le Lait</h4>
+      <p class="lead mt-3">Ta pâte est prête, il faut ajouter le lait. La recette demande <span id="frac2-base"></span> litre de lait.<br>
+      Ta balance électronique n'affiche que des <strong>nombres décimaux</strong>.</p>
+      <div class="card p-3 my-4 bg-light border-0">
+        <h5>Quel nombre décimal correspond à <span id="frac2-target"></span> litre ?</h5>
+        <div class="input-group mt-3" style="max-width: 300px; margin: 0 auto;">
+          <input type="text" id="input-step2" class="form-control text-center" placeholder="ex: 0.75">
+          <button id="btn-step2" class="btn btn-pink" style="background-color:var(--color-pink); color:var(--color-choc); font-weight:bold;" onclick="checkStep2()">Valider</button>
+        </div>
+      </div>
+      <div id="feedback-2" class="feedback-box"></div>
+      <button id="next-btn-2" class="btn btn-primary mt-3" style="display:none;" onclick="nextStep(2)">Continuer <i class="fa-solid fa-arrow-right"></i></button>
+    </div>
+
+    <!-- Étape 3 -->
+    <div id="step-3" class="step-card">
+      <h4>Étape 3 : Le Sucre</h4>
+      <p class="lead mt-3">Pour le glaçage, tu as déjà versé <span id="frac3-a"></span> de tasse de sucre.<br>
+      Le chef te dit d'en ajouter encore <span id="frac3-b"></span> de tasse.</p>
+      <div class="card p-3 my-4 bg-light border-0">
+        <h5>Quelle est la fraction totale de sucre dans ton bol ?</h5>
+        <div class="d-flex justify-content-center align-items-center mt-3 gap-2">
+          <input type="number" id="input-step3-num" class="form-control text-center" style="width:80px;" placeholder="Num">
+          <span class="fs-3">/</span>
+          <input type="number" id="input-step3-den" class="form-control text-center" style="width:80px;" placeholder="Den">
+          <button id="btn-step3" class="btn btn-pink" style="background-color:var(--color-pink); color:var(--color-choc); font-weight:bold;" onclick="checkStep3()">Valider</button>
+        </div>
+      </div>
+      <div id="feedback-3" class="feedback-box"></div>
+    </div>
+
+    <!-- Étape de Fin -->
+    <div id="step-end" class="step-card">
+      <i class="fa-solid fa-trophy header-icon text-warning"></i>
+      <h4>Activité Terminée</h4>
+      <h2 id="final-score" class="my-4 display-4 text-pink" style="color:var(--color-accent);"></h2>
+      <p id="end-msg" class="lead"></p>
+    </div>
+
+  </div>
+
+  <!-- Scripts -->
+  <script src="assets/js/bootstrap.bundle.min.js"></script>
+  <script src="scorm_api.js"></script>
+  <script src="game_logic.js"></script>
+  
+  <script>
+    // Surcharge de la méthode de fin pour envoyer la note SCORM
+    const originalShowEndScreen = window.checkStep3; // wait, the end screen is called in checkStep3
+    // We will just patch the updateScormScore inside game_logic or here
+    
+    // Patching game_logic functions to send SCORM data
+    const observer = new MutationObserver((mutations) => {
+        mutations.forEach((mutation) => {
+            if (mutation.target.id === 'step-end' && mutation.target.classList.contains('active')) {
+                // Le jeu est terminé
+                const currentScore = parseInt(document.getElementById('final-score').innerText);
+                if(window.updateScormScore) window.updateScormScore(currentScore);
+                if(window.finishScorm) window.finishScorm(currentScore >= 60 ? "passed" : "failed");
+            }
+        });
+    });
+    
+    document.addEventListener('DOMContentLoaded', () => {
+        const endCard = document.getElementById('step-end');
+        if(endCard) observer.observe(endCard, { attributes: true, attributeFilter: ['class'] });
+    });
+  </script>
+</body>
+</html>

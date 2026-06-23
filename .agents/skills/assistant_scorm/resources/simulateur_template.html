@@ -32,10 +32,8 @@
 </head>
 <body>
   
-  <div class="sim-tabs">
     <button class="tab-link active" onclick="openTab('tab-test')">🎮 Test SCORM</button>
     <button class="tab-link" onclick="openTab('tab-tree')">🌳 Arborescence</button>
-    <button class="tab-link" onclick="openTab('tab-export')">📦 Générateur SCORM (ZIP)</button>
   </div>
 
   <div class="sim-wrapper">
@@ -80,18 +78,6 @@
       </div>
     </div>
 
-    <!-- ONGLET 3: EXPORT -->
-    <div id="tab-export" class="sim-tab-content">
-      <h2>Générer le paquet SCORM</h2>
-      <p>Pour des raisons de sécurité liées aux navigateurs (CORS), la création du fichier ZIP local ne peut pas se faire directement ici.</p>
-      <p>Veuillez copier la consigne ci-dessous et la coller à votre agent IA. Il se chargera de créer le fichier <code>index.html</code>, le manifeste Moodle, et de zipper le tout pour vous !</p>
-      
-      <div style="background: #222; color: #fff; padding: 15px; border-left: 4px solid var(--accent); margin-bottom: 20px; font-family: monospace; border-radius: 4px;" id="prompt-text">Agent, merci de générer le paquet SCORM (index.html, imsmanifest.xml) et l'archive ZIP [nom_de_l_activite].zip.</div>
-      
-      <button class="export-btn" onclick="copyPrompt()">
-        📋 Copier la consigne pour l'agent
-      </button>
-      <span id="copy-feedback" style="display:none; color: var(--success); margin-left: 10px; font-weight: bold;">Copié dans le presse-papier !</span>
     </div>
   </div>
 
@@ -189,16 +175,6 @@
         closeNodeModal();
       }
     });
-
-    // Copier la consigne de génération
-    function copyPrompt() {
-      var text = document.getElementById('prompt-text').innerText;
-      navigator.clipboard.writeText(text).then(function() {
-        var feedback = document.getElementById('copy-feedback');
-        feedback.style.display = 'inline';
-        setTimeout(function() { feedback.style.display = 'none'; }, 3000);
-      });
-    }
   </script>
 </body>
 </html>

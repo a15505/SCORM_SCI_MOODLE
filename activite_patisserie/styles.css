@@ -1,0 +1,127 @@
+@font-face {
+    font-family: 'Ubuntu';
+    src: url('assets/fonts/Ubuntu-Regular.woff2') format('woff2');
+    font-weight: normal;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'Ubuntu';
+    src: url('assets/fonts/Ubuntu-Bold.woff2') format('woff2');
+    font-weight: bold;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'Viga';
+    src: url('assets/fonts/Viga-Regular.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+}
+
+:root {
+    --color-cream: #FFFDD0;
+    --color-pink: #FFB6C1;
+    --color-choc: #3E1E04;
+    --color-choc-light: #6A3A14;
+    --color-accent: #E85D75;
+}
+
+body {
+    background-color: var(--color-cream);
+    color: var(--color-choc);
+    font-family: 'Ubuntu', sans-serif;
+}
+
+h1, h2, h3, h4, h5, h6 {
+    font-family: 'Viga', sans-serif;
+    color: var(--color-choc);
+}
+
+.game-container {
+    max-width: 800px;
+    margin: 2rem auto;
+    background-color: white;
+    border-radius: 15px;
+    box-shadow: 0 10px 20px rgba(62, 30, 4, 0.1);
+    padding: 2rem;
+    border-top: 8px solid var(--color-pink);
+}
+
+.step-card {
+    display: none;
+    animation: fadeIn 0.5s ease-in-out;
+}
+
+.step-card.active {
+    display: block;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.fraction-btn {
+    background-color: var(--color-cream);
+    border: 2px solid var(--color-pink);
+    color: var(--color-choc);
+    font-size: 1.2rem;
+    font-weight: bold;
+    border-radius: 10px;
+    padding: 10px 20px;
+    margin: 5px;
+    transition: all 0.3s;
+}
+
+.fraction-btn:hover {
+    background-color: var(--color-pink);
+    color: white;
+    transform: scale(1.05);
+}
+
+.fraction-btn.selected {
+    background-color: var(--color-accent);
+    color: white;
+    border-color: var(--color-accent);
+}
+
+.feedback-box {
+    margin-top: 1.5rem;
+    padding: 1rem;
+    border-radius: 8px;
+    display: none;
+    font-weight: bold;
+}
+
+.feedback-success {
+    background-color: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+.feedback-error {
+    background-color: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}
+
+.header-icon {
+    font-size: 3rem;
+    color: var(--color-accent);
+    margin-bottom: 1rem;
+}
+
+.progress-bar-custom {
+    background-color: var(--color-pink);
+}
+
+.random-value {
+    color: var(--color-accent);
+    font-weight: bold;
+}
+
+.random-icon {
+    color: var(--color-choc-light);
+    margin-right: 4px;
+}

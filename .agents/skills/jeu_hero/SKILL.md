@@ -28,7 +28,12 @@ Définissez :
 Pour structurer le jeu sans surcharger le développement, proposez ce modèle de structure convergente :
 
 > [!IMPORTANT]
-> **Format de présentation de la structure** : Lors du plan d'implémentation, l'agent doit impérativement créer une **forme textuelle indentée** (listes à puces) pour faire comprendre la logique du jeu. Ne proposez **jamais** de schéma ou diagramme global (ex: Mermaid) car l'affichage n'est pas bien géré et illisible à l'écran. L'interface graphique conviviale de l'arborescence est réservée exclusivement à l'onglet Arborescence du `simulateur.html`.
+> **Format exclusif du livrable (Étape 1 du Pipeline)** : L'agent ne doit générer **AUCUN CODE** (HTML, CSS, JS ou SCORM) durant cette phase. Le livrable final de ce skill doit être un document texte facile à consulter, structuré à la manière d'une **version imprimable (corrigé de l'enseignant) présentée à un élève**. Utilisez une forme textuelle indentée claire (listes à puces) pour illustrer la logique de l'arbre, les textes de l'histoire, les questions, et les rétroactions. Ne proposez **jamais** de schéma ou diagramme global (ex: Mermaid) car l'affichage n'est pas toujours lisible à l'écran.
+
+* **Gestion de l'Aléatoire** : Si le concepteur demande un jeu de questions, de variables ou de valeurs générées aléatoirement :
+  * Vous devez effectuer un **tirage aléatoire simulé** et utiliser ce jeu de valeurs spécifiques pour rédiger le corrigé textuel.
+  * Précisez explicitement au début du document que le scénario présenté est basé sur un "tirage aléatoire d'exemple".
+  * **Mettez en évidence visuellement** (ex: en gras ou avec une icône) les valeurs qui ont été générées aléatoirement dans le texte, pour que l'enseignant comprenne bien quelles variables changeront d'une partie à l'autre.
 
 * **Niveau 1 : Diagnostic (Choix initial)**
   * Choix A (Correct/Méthodique) -> Rétroaction positive -> Accès au Niveau 2.
